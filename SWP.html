@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Smart Weather App</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background: #e0f2f1;
+      padding: 30px;
+      text-align: center;
+      transition: background 0.3s, color 0.3s;
+    }
+
+    body.dark {
+      background: #121212;
+      color: #eee;
+    }
+
+    h1 {
+      color: #00695c;
+    }
+
+    .dark h1 {
+      color: #80cbc4;
+    }
+
+    input, button {
+      padding: 10px;
+      font-size: 16px;
+      border-radius: 6px;
+      margin: 10px;
+    }
+
+    input {
+      width: 200px;
+      border: 1px solid #ccc;
+    }
+
+    button {
+      background-color: #00796b;
+      color: white;
+      border: none;
+      cursor: pointer;
+    }
+
+    .weather {
+      margin-top: 30px;
+      background: #fff;
+      padding: 20px;
+      border-radius: 12px;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+      display: inline-block;
+      max-width: 600px;
+      color: #333;
+    }
+
+    .dark .weather {
+      background: #1e1e1e;
+      color: #eee;
+    }
+
+    .forecast {
+      display: flex;
+      justify-content: space-around;
+      margin-top: 20px;
+      flex-wrap: wrap;
+    }
+
+    .day {
+      background: #f1f1f1;
+      border-radius: 10px;
+      padding: 10px;
+      margin: 5px;
+      width: 100px;
+      text-align: center;
+    }
+
+    .dark .day {
+      background: #2b2b2b;
+    }
+
+    .error {
+      color: red;
+      margin-top: 20px;
+    }
+
+    img {
+      width: 50px;
+    }
+
+    .top-controls {
+      margin: 10px 0;
+    }
+
+    .toggle-btn {
+      background: #ffab00;
+      color: #333;
+    }
+  </style>
+</head>
+<body>
+
+  <h1>🌦 Smart Weather App</h1>
+
+  <div class="top-controls">
+    <input type="text" id="cityInput" placeholder="Enter city name">
+    <button onclick="getForecast()">Search</button>
+    <button onclick="getByLocation()">📍 My Location</button>
+    <button onclick="getForecast()">🔁 Refresh</button>
+    <button class="toggle-btn" onclick="toggleDarkMode()">🌙 Toggle Dark Mode</button>
+  </div>
+
+  <div class="weather" id="weatherResult" style="display: none;"></div>
+  <div class="error" id="error"></div>
+
+  <script>
+    const apiKey = "d97ed46ebd44473517df75e4c973a8cb"; // Replace with your OpenWeatherMap API key
+
+    function toggleDarkMode() {
+      document.body.classList.toggle("dark");
+    }
+
+    function getForecast(city) {
+      const cityInput = document.getElementById("cityInput").value;
+      const cityName = city || cityInput;
+
+      if (!cityName) {
+        showError("Please enter a city name or use location.");
+        return;
+      }
+
+      const url = `https://api.openweathermap.org/data/2.5/forecast?q=${cityName}&appid=${apiKey}&units=metric`;
+      fetchData(url);
+    }
+
+    function getByLocation() {
+      if ("geolocation" in navigator) {
+        navigator.geolocation.getCurrentPosition(
+          (position) => {
+            const lat = position.coords.latitude;
+            const lon = position.coords.longitude;
+            const url = `https://api.openweathermap.org/data/2.5/forecast?lat=${lat}&lon=${lon}&appid=${apiKey}&units=metric`;
+            fetchData(url);
+          },
+          (err) => {
+            showError("Failed to get location.");
+          }
+        );
+      } else {
+        showError("Geolocation not supported.");
+      }
+    }
+
+    function fetchData(url) {
+      const result = document.getElementById('weatherResult');
+      const errorDiv = document.getElementById('error');
+      result.innerHTML = "";
+      errorDiv.textContent = "";
+
+      fetch(url)
+        .then(res => {
+          if (!res.ok) throw new Error("City not found");
+          return res.json();
+        })
+        .then(data => {
+          const cityName = data.city.name + ", " + data.city.country;
+          const dailyForecasts = data.list.filter(item => item.dt_txt.includes("12:00:00"));
+
+          let html = `<h2>${cityName}</h2>`;
+          html += `<div class="forecast">`;
+
+          dailyForecasts.forEach(day => {
+            const date = new Date(day.dt_txt).toDateString();
+            const temp = day.main.temp.toFixed(1);
+            const desc = day.weather[0].description;
+            const icon = `https://openweathermap.org/img/wn/${day.weather[0].icon}@2x.png`;
+
+            html += `
+              <div class="day">
+                <h4>${date.split(" ")[0]}</h4>
+                <img src="${icon}" alt="${desc}" />
+                <p>${temp}°C</p>
+                <p>${desc}</p>
+              </div>
+            `;
+          });
+
+          html += `</div>`;
+          result.innerHTML = html;
+          result.style.display = "block";
+        })
+        .catch(err => {
+          showError(err.message);
+        });
+    }
+
+    function showError(msg) {
+      const errorDiv = document.getElementById("error");
+      const result = document.getElementById("weatherResult");
+      errorDiv.textContent = msg;
+      result.style.display = "none";
+    }
+  </script>
+
+</body>
+</html>
